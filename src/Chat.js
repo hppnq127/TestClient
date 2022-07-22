@@ -1,18 +1,23 @@
 import React, { useEffect, useState } from "react";
 import ScrollToBottom from "react-scroll-to-bottom";
-import moment from 'moment'
-function Chat({ socket }) {
+import moment from "moment";
+import io from "socket.io-client";
+const socket = io.connect("http://localhost:3001");
+function Chat({ userId }) {
   const [currentMessage, setCurrentMessage] = useState("");
   const [messageList, setMessageList] = useState([]);
   const sendMessage = async () => {
     if (currentMessage !== "") {
+      const stringMoment = `${moment().toISOString()}`;
+      const thisMoment = moment(`${stringMoment.slice(0, 23)}-07:00`);
+      const modify = `${thisMoment.toISOString()}`;
       const messageData = {
         id: Math.random(),
-        ConversationId: 2,
-        createdAt: moment().toISOString(),
+        ConversationId: userId,
+        createdAt: modify,
         Content: currentMessage,
         Chatting: "Nguyen",
-       /*  ConversationId: 2,
+        /*  ConversationId: 2,
         author: "Nguyen",
         message: currentMessage,
         time:
@@ -26,11 +31,29 @@ function Chat({ socket }) {
       setCurrentMessage("");
     }
   };
-
   useEffect(() => {
     socket.on("receive_message", (data) => {
-      setMessageList((list) => [...list, data]);
+      if (data.ConversationId === userId) {
+        setMessageList((list) => [...list, data]);
+      } else {
+        return false;
+      }
     });
+    socket.on('connect', function () { 
+      socket.emit("login", { userId: userId });
+      socket.on('disconnected', function() {
+          socket.emit('Offline',{ userId: userId });
+
+      });
+
+  });
+    /* if (socket.connected) {
+      socket.emit("login", { userId: userId });
+    } else {
+      socket.emit("disconnected", { userId: userId });
+    } */
+    
+    
   }, [socket]);
 
   return (
@@ -51,7 +74,7 @@ function Chat({ socket }) {
                     <p>{messageContent.Content}</p>
                   </div>
                   <div className="message-meta">
-                   {/*  <p id="time">{messageContent.time}</p>
+                    {/*  <p id="time">{messageContent.time}</p>
                     <p id="author">{messageContent.author}</p> */}
                   </div>
                 </div>
